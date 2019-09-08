@@ -1,4 +1,5 @@
-/*
+package com.google.api.services.samples.discovery.cmdline;
+/**
  * Copyright (c) 2010 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -10,9 +11,7 @@
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
- */
-
-package com.google.api.services.samples.discovery.cmdline;
+ **/
 
 import com.google.api.client.util.Lists;
 import com.google.api.client.util.Sets;

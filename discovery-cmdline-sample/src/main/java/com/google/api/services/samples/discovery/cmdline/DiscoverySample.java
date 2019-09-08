@@ -1,4 +1,6 @@
-/*
+package com.google.api.services.samples.discovery.cmdline;
+
+/* 
  * Copyright (c) 2010 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -12,14 +14,14 @@
  * the License.
  */
 
-package com.google.api.services.samples.discovery.cmdline;
-
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.http.FileContent;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpContent;
@@ -69,7 +71,7 @@ public class DiscoverySample {
    * globally shared instance across your application.
    */
   private static FileDataStoreFactory dataStoreFactory;
-  
+
   /** Global instance of the HTTP transport. */
   private static HttpTransport httpTransport;
 
@@ -88,20 +90,30 @@ public class DiscoverySample {
 
   public static void main(String[] args) throws Exception {
     // parse command argument
-    if (args.length == 0) {
-      showMainHelp();
-    } else {
-      String command = args[0];
-      if (command.equals("help")) {
-        help(args);
-      } else if (command.equals("call")) {
-        call(args);
-      } else if (command.equals("discover")) {
-        discover(args);
-      } else {
-        error(null, "unknown command: " + command);
-      }
-    }
+    /*Modified by Xertica - Dennys Mallqui 2019-09-01*/
+    /*
+     * if (args.length == 0) { showMainHelp(); } else { String command = args[0]; if
+     * (command.equals("help")) { help(args); } else if (command.equals("call")) { call(args); }
+     * else if (command.equals("discover")) { discover(args); } else { error(null,
+     * "unknown command: " + command); } }
+     */
+    
+    //Execute Discover Method
+    //String[] params = {"discover", "datacatalog", "v1beta1"};
+    //discover(params);
+    
+    //Execute Call Method
+    String json = "{\n" + 
+        "              \"scope\": {\n" + 
+        "                \"includeProjectIds\": [\n" + 
+        "                  \"pe-intercorp-gcp-01\"\n" + 
+        "                ]\n" + 
+        "              },\n" + 
+        "              \"query\": \"system=bigquery AND tag:env AND type=table AND name=pe-intercorp-gcp-01.demo_dataset.trips\"\n" + 
+        "            }";
+    String[] params = {"discover", "datacatalog", "v1beta1", "catalog.search", json};
+    call(params);
+    
   }
 
   private static void help(String[] args) {
@@ -149,7 +161,8 @@ public class DiscoverySample {
   }
 
   private static void putParameter(String argName, Map<String, Object> parameters,
-      String parameterName, JsonSchema parameter, String parameterValue) {
+                                   String parameterName, JsonSchema parameter, 
+                                   String parameterValue) {
     Object value = parameterValue;
     if (parameter != null) {
       if ("boolean".equals(parameter.getType())) {
@@ -232,12 +245,16 @@ public class DiscoverySample {
       }
     }
     // possibly required content
+    /*Modified by Xertica - Dennys Mallqui 2019-09-01*/
+    int x = i;
     if (!method.getHttpMethod().equals("GET") && !method.getHttpMethod().equals("DELETE")) {
       String fileName = args[i++];
       requestBodyFile = new File(fileName);
-      if (!requestBodyFile.canRead()) {
+      /*Modified by Xertica - Dennys Mallqui 2019-09-01*/
+      if (!fileName.contains("{") && !requestBodyFile.canRead()) {        
         error("call", "unable to read file: " + fileName);
       }
+      
     }
     while (i < args.length) {
       String argName = args[i++];
@@ -265,12 +282,18 @@ public class DiscoverySample {
         putParameter(argName, parameters, parameterName, parameter, parameterValue);
       }
     }
+    /*Modified by Xertica - Dennys Mallqui 2019-09-01*/
     GenericUrl url = new GenericUrl(UriTemplate.expand(
-        "https://www.googleapis.com" + restDescription.getBasePath() + method.getPath(), parameters,
+        restDescription.getRootUrl() + method.getPath(), parameters,
         true));
     HttpContent content = null;
-    if (requestBodyFile != null) {
+    /*Modified by Xertica - Dennys Mallqui 2019-09-01*/
+    String fileName = args[x];
+    if (!fileName.contains("{") && requestBodyFile != null) {
       content = new FileContent(contentType, requestBodyFile);
+    }else {
+      /*Modified by Xertica - Dennys Mallqui 2019-09-01*/
+      content = new ByteArrayContent(contentType,fileName.getBytes());
     }
     try {
       HttpRequestFactory requestFactory;
@@ -279,22 +302,32 @@ public class DiscoverySample {
         for (Object s : method.getScopes()) {
           scopes.add((String) s);
         }
-        Credential credential = authorize(method.getId(), scopes);
+        GoogleCredential credential = authorize2(method.getId(), scopes);
         requestFactory = httpTransport.createRequestFactory(credential);
       } else {
         requestFactory = httpTransport.createRequestFactory();
-      }
+      }    
+      System.out.println(url);
       HttpRequest request = requestFactory.buildRequest(method.getHttpMethod(), url, content);
       String response = request.execute().parseAsString();
       System.out.println(response);
     } catch (IOException e) {
-      System.err.println(e.getMessage());
+      e.printStackTrace();
       System.exit(1);
     } catch (Throwable t) {
       t.printStackTrace();
       System.exit(1);
     }
   }
+  
+  /*Modified by Xertica - Dennys Mallqui 2019-09-01*/
+  /** Authorizes the installed application to access user's protected data. */
+
+  private static GoogleCredential authorize2(String methodId, List<String> scopes) throws Exception {
+    GoogleCredential credential = GoogleCredential.fromStream(DiscoverySample.class.getResourceAsStream("/service_account.json"));
+    return credential.createScoped(scopes); 
+  }
+
 
   /** Authorizes the installed application to access user's protected data. */
   private static Credential authorize(String methodId, List<String> scopes) throws Exception {
@@ -309,10 +342,13 @@ public class DiscoverySample {
     }
     // set up authorization code flow
     GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-        httpTransport, JSON_FACTORY, clientSecrets, scopes).setDataStoreFactory(dataStoreFactory)
-        .build();
+        httpTransport, JSON_FACTORY, clientSecrets, scopes).build();
     // authorize
-    return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
+    LocalServerReceiver.Builder server = new LocalServerReceiver.Builder();
+    server.setHost("localhost");
+    server.setPort(57526);
+    server.setCallbackPath("/Callback");
+    return new AuthorizationCodeInstalledApp(flow, server.build()).authorize("user");
   }
 
   private static RestDescription loadGoogleAPI(String command, String apiName, String apiVersion)
@@ -335,7 +371,9 @@ public class DiscoverySample {
   }
 
   private static void processMethods(
-      ArrayList<MethodDetails> result, String resourceName, Map<String, RestMethod> methodMap) {
+                                     ArrayList<MethodDetails> result, 
+                                     String resourceName, Map<String, 
+                                     RestMethod> methodMap) {
     if (methodMap == null) {
       return;
     }
@@ -371,7 +409,9 @@ public class DiscoverySample {
   }
 
   private static void processResources(
-      ArrayList<MethodDetails> result, String resourceName, Map<String, RestResource> resourceMap) {
+                                       ArrayList<MethodDetails> result, 
+                                       String resourceName, Map<String, 
+                                       RestResource> resourceMap) {
     if (resourceMap == null) {
       return;
     }
@@ -443,3 +483,5 @@ public class DiscoverySample {
     }
   }
 }
+
+
